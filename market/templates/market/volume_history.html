@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>История объёма по тикеру</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 1rem; background: #0e0e12; color: #e5e5e5; min-height: 100vh; }
+        a { color: #7cb3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1 { font-size: 1.35rem; margin: 0 0 1rem; font-weight: 600; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .toolbar label { display: flex; align-items: center; gap: 0.5rem; }
+        .toolbar select { padding: 0.5rem 0.75rem; border: 1px solid #333; border-radius: 6px; background: #1a1a1f; color: #e5e5e5; min-width: 140px; }
+        .chart-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #2a2a32; padding: 1rem; background: #1a1a1f; margin-bottom: 1rem; }
+        .chart-wrap canvas { max-height: 400px; }
+        .empty-msg { color: #888; padding: 2rem; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>История объёма по тикеру</h1>
+    <div class="toolbar">
+        <label>
+            Тикер:
+            <select id="symbol-select">
+                <option value="">— выберите тикер —</option>
+                {% for s in symbols %}
+                <option value="{{ s }}" {% if symbol == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+    <div class="chart-wrap">
+        {% if symbol %}
+        <canvas id="volume-chart"></canvas>
+        {% else %}
+        <p class="empty-msg">Выберите тикер из списка. Данные берутся из ежедневных снимков (команда <code>fetch_daily_volumes</code>).</p>
+        {% endif %}
+    </div>
+    <div class="nav-links">
+        <a href="{% url 'market:select_tickers' %}">Тикеры на день</a>
+        <a href="{% url 'market:charts' %}">Графики (TradingView)</a>
+        <a href="{% url 'admin:index' %}">Админка</a>
+    </div>
+
+    {% if symbol %}
+    <script>
+        (function() {
+            var dates = {{ dates_json|safe }};
+            var volumes = {{ volumes_json|safe }};
+            var turnovers = {{ turnovers_json|safe }};
+            var symbolSelect = document.getElementById('symbol-select');
+
+            symbolSelect.addEventListener('change', function() {
+                var v = this.value;
+                window.location.search = v ? '?symbol=' + encodeURIComponent(v) : '';
+            });
+
+            if (dates.length && (volumes.length || turnovers.length)) {
+                var ctx = document.getElementById('volume-chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [
+                            {
+                                label: 'Объём 24h (база)',
+                                data: volumes,
+                                borderColor: 'rgb(124, 179, 255)',
+                                backgroundColor: 'rgba(124, 179, 255, 0.1)',
+                                fill: true,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: 'Оборот 24h (USDT)',
+                                data: turnovers,
+                                borderColor: 'rgb(100, 200, 150)',
+                                backgroundColor: 'rgba(100, 200, 150, 0.1)',
+                                fill: true,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { position: 'top' }
+                        },
+                        scales: {
+                            x: { grid: { color: '#2a2a32' }, ticks: { color: '#888', maxTicksLimit: 12 } },
+                            y:  { type: 'linear', display: true, position: 'left',  grid: { color: '#2a2a32' }, ticks: { color: '#888' } },
+                            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#888' } }
+                        }
+                    }
+                });
+            } else {
+                document.querySelector('.chart-wrap').innerHTML = '<p class="empty-msg">По выбранному тикеру нет данных. Запустите <code>python manage.py fetch_daily_volumes</code> для сбора истории.</p>';
+            }
+        })();
+    </script>
+    {% endif %}
+</body>
+</html>

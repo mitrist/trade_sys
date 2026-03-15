@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Графики — выбранные тикеры</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 1rem; background: #0e0e12; color: #e5e5e5; min-height: 100vh; }
+        a { color: #7cb3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1 { font-size: 1.35rem; margin: 0 0 1rem; font-weight: 600; }
+        .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .toolbar label { display: flex; align-items: center; gap: 0.5rem; }
+        .toolbar input[type=date] { padding: 0.4rem 0.6rem; border: 1px solid #333; border-radius: 6px; background: #1a1a1f; color: #e5e5e5; }
+        .ticker-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+        .ticker-card { padding: 0.5rem 1rem; background: #1a1a1f; border: 1px solid #2a2a32; border-radius: 8px; cursor: pointer; font-weight: 500; transition: background .15s, border-color .15s; }
+        .ticker-card:hover { background: #22222a; border-color: #3a3a45; }
+        .ticker-card.active { background: #1e3a5f; border-color: #7cb3ff; color: #fff; }
+        .chart-wrap { border-radius: 8px; overflow: hidden; border: 1px solid #2a2a32; min-height: 500px; }
+        #chart-container { height: 500px; width: 100%; }
+        .chart-placeholder { display: flex; align-items: center; justify-content: center; min-height: 500px; background: #1a1a1f; color: #888; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Графики выбранных тикеров</h1>
+    <div class="toolbar">
+        <label>
+            Дата:
+            <input type="date" id="date-picker" value="{{ date_str }}">
+        </label>
+    </div>
+    <div class="ticker-list" id="ticker-list">
+        {% for symbol in tickers %}
+        <div class="ticker-card" data-symbol="BYBIT:{{ symbol }}" data-raw="{{ symbol }}">{{ symbol }}</div>
+        {% empty %}
+        <p style="color:#888;">Нет тикеров на эту дату. <a href="{% url 'market:select_tickers' %}">Добавить тикеры</a></p>
+        {% endfor %}
+    </div>
+    <div class="chart-wrap">
+        <div id="chart-container">
+            {% if tickers %}
+            <div class="chart-placeholder" id="chart-placeholder">Загрузка графика…</div>
+            {% else %}
+            <div class="chart-placeholder">Выберите дату с тикерами или добавьте тикеры на день.</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="nav-links">
+        <a href="{% url 'market:select_tickers' %}">Тикеры на день</a>
+        <a href="{% url 'admin:index' %}">Админка</a>
+    </div>
+
+    <script>
+        (function() {
+            var tickers = {{ tickers_json|safe }};
+            if (typeof tickers === 'string') try { tickers = JSON.parse(tickers); } catch(e) { tickers = []; }
+            var datePicker = document.getElementById('date-picker');
+            var tickerList = document.getElementById('ticker-list');
+            var chartContainer = document.getElementById('chart-container');
+            var placeholder = document.getElementById('chart-placeholder');
+            var firstSymbol = tickers.length ? 'BYBIT:' + tickers[0] : null;
+
+            datePicker.addEventListener('change', function() {
+                window.location.search = '?date=' + this.value;
+            });
+
+            function renderChart(symbol) {
+                chartContainer.innerHTML = '';
+                var wrap = document.createElement('div');
+                wrap.className = 'tradingview-widget-container';
+                wrap.style.cssText = 'height:100%;width:100%;';
+                var widgetDiv = document.createElement('div');
+                widgetDiv.className = 'tradingview-widget-container__widget';
+                widgetDiv.style.cssText = 'height:calc(100% - 32px);width:100%;';
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+                script.async = true;
+                script.textContent = JSON.stringify({
+                    autosize: true,
+                    symbol: symbol,
+                    interval: '15',
+                    timezone: 'Etc/UTC',
+                    theme: 'dark',
+                    style: '1',
+                    locale: 'ru',
+                    allow_symbol_change: true,
+                    calendar: false,
+                    support_host: 'https://www.tradingview.com'
+                });
+                wrap.appendChild(widgetDiv);
+                wrap.appendChild(script);
+                chartContainer.appendChild(wrap);
+            }
+
+            tickerList.querySelectorAll('.ticker-card[data-symbol]').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    tickerList.querySelectorAll('.ticker-card').forEach(function(c) { c.classList.remove('active'); });
+                    el.classList.add('active');
+                    renderChart(el.dataset.symbol);
+                });
+            });
+
+            if (firstSymbol) {
+                var firstCard = tickerList.querySelector('.ticker-card[data-symbol="' + firstSymbol + '"]');
+                if (firstCard) firstCard.classList.add('active');
+                renderChart(firstSymbol);
+            }
+        })();
+    </script>
+</body>
+</html>
