@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Инструменты</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 1rem; background: #0e0e12; color: #e5e5e5; }
+        a { color: #7cb3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .toolbar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .search-wrap { position: relative; }
+        .search-wrap input { padding: 0.5rem 0.75rem 0.5rem 2rem; width: 220px; border: 1px solid #333; border-radius: 8px; background: #1a1a1f; color: #e5e5e5; }
+        .search-wrap::before { content: ""; position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border: 2px solid #666; border-radius: 50%; }
+        .search-wrap::after { content: ""; position: absolute; left: 1rem; top: 58%; width: 6px; height: 2px; background: #666; transform: rotate(45deg); }
+        .count { color: #888; font-size: 0.9rem; }
+        .table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #2a2a32; }
+        table { width: 100%; border-collapse: collapse; background: #1a1a1f; }
+        th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #2a2a32; }
+        th { font-weight: 600; color: #aaa; white-space: nowrap; }
+        th a { color: #aaa; display: inline-flex; align-items: center; gap: 0.25rem; }
+        th a:hover { color: #7cb3ff; }
+        td { font-size: 0.9rem; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+        .symbol-cell { display: flex; align-items: center; gap: 0.5rem; }
+        .symbol-icon { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #f0b90b 0%, #c9940e 100%); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.7rem; color: #0e0e12; }
+        .symbol-icon.eth { background: linear-gradient(135deg, #627eea, #4c63b8); }
+        .symbol-icon.other { background: linear-gradient(135deg, #555, #333); }
+        .symbol-name { font-weight: 500; }
+        .symbol-desc { color: #888; font-size: 0.8rem; }
+        .positive { color: #0ecb81; }
+        .negative { color: #f6465d; }
+        .num { font-variant-numeric: tabular-nums; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { margin-right: 1rem; }
+        .pagination { margin-top: 1rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .pagination a, .pagination span { padding: 0.35rem 0.6rem; border-radius: 4px; background: #1a1a1f; border: 1px solid #2a2a32; color: #e5e5e5; font-size: 0.9rem; }
+        .pagination a:hover { background: #222; border-color: #7cb3ff; }
+        .pagination .current { background: #1e3a5f; border-color: #7cb3ff; }
+        .sort-arrow { opacity: 0.6; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <h1>Инструменты</h1>
+    <div class="toolbar">
+        <form method="get" action="" class="search-wrap">
+            <input type="text" name="q" value="{{ q }}" placeholder="Поиск по символу" aria-label="Поиск">
+            <input type="hidden" name="order" value="{{ order }}">
+            <input type="hidden" name="sort" value="{{ sort }}">
+        </form>
+        <span class="count">Инструментов: {{ total }}{% if date %} (на {{ date|date:"d.m.Y" }}){% endif %}</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th><a href="?order=symbol&sort={% if order == 'symbol' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Инструмент</a> {% if order == 'symbol' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th><a href="?order=rating&sort={% if order == 'rating' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Рейтинг</a> {% if order == 'rating' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th><a href="?order=price&sort={% if order == 'price' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Цена</a> {% if order == 'price' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th><a href="?order=change&sort={% if order == 'change' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Изменение % 24ч</a> {% if order == 'change' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th><a href="?order=cap&sort={% if order == 'cap' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">↓ Капитализация</a> {% if order == 'cap' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th><a href="?order=volume&sort={% if order == 'volume' and sort == 'asc' %}desc{% else %}asc{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Объём 24ч</a> {% if order == 'volume' %}<span class="sort-arrow">{% if sort == 'asc' %}↑{% else %}↓{% endif %}</span>{% endif %}</th>
+                    <th>Циркул. предложение</th>
+                    <th>Объём / Рын. кап.</th>
+                    <th>Доминация в соцсетях %</th>
+                    <th>Категория</th>
+                    <th>Тех. рейтинг</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td>
+                        <div class="symbol-cell">
+                            <span class="symbol-icon {% if 'BTC' in r.symbol %}{% elif 'ETH' in r.symbol %}eth{% else %}other{% endif %}">{{ r.symbol|slice:":1" }}</span>
+                            <div>
+                                <span class="symbol-name">{{ r.symbol|slice:":-4" }}</span>
+                                <div class="symbol-desc">{{ r.symbol }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="num">{{ r.rank }}</td>
+                    <td class="num">{{ r.last_price|floatformat:2 }} USD</td>
+                    <td class="num {% if r.change_pct != None %}{% if r.change_pct >= 0 %}positive{% else %}negative{% endif %}{% endif %}">{% if r.change_pct != None %}{% if r.change_pct >= 0 %}+{% endif %}{{ r.change_pct|floatformat:2 }}%{% else %}—{% endif %}</td>
+                    <td class="num">—</td>
+                    <td class="num">{{ r.turnover_display }}</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>Linear</td>
+                    <td>—</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="11" style="text-align:center;color:#888;padding:2rem;">Нет данных. Запустите <code>python manage.py fetch_daily_volumes</code>.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page.has_other_pages %}
+    <div class="pagination">
+        {% if page.has_previous %}
+        <a href="?page={{ page.previous_page_number }}{% if order %}&order={{ order }}&sort={{ sort }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">← Назад</a>
+        {% endif %}
+        <span class="current">Стр. {{ page.number }} из {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}
+        <a href="?page={{ page.next_page_number }}{% if order %}&order={{ order }}&sort={{ sort }}{% endif %}{% if q %}&q={{ q|urlencode }}{% endif %}">Вперёд →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="nav-links">
+        <a href="{% url 'market:select_tickers' %}">Тикеры на день</a>
+        <a href="{% url 'market:volume_history' %}">История объёма</a>
+        <a href="{% url 'market:charts' %}">Графики</a>
+        <a href="{% url 'admin:index' %}">Админка</a>
+    </div>
+</body>
+</html>

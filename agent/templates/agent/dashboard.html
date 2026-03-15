@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Запуски агента</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 1rem; background: #0e0e12; color: #e5e5e5; }
+        a { color: #7cb3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1 { font-size: 1.35rem; margin: 0 0 1rem; }
+        .toolbar { margin-bottom: 1rem; }
+        .toolbar select { padding: 0.4rem 0.6rem; background: #1a1a1f; border: 1px solid #333; border-radius: 6px; color: #e5e5e5; }
+        .table-wrap { overflow-x: auto; border: 1px solid #2a2a32; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; background: #1a1a1f; }
+        th, td { padding: 0.6rem 0.75rem; text-align: left; border-bottom: 1px solid #2a2a32; }
+        th { color: #888; font-weight: 600; }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+        .status { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+        .status.running { background: #2a4a2a; color: #8f8; }
+        .status.success { background: #1e3a5f; color: #7cb3ff; }
+        .status.failed { background: #5f2a2a; color: #f88; }
+        .summary { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aaa; font-size: 0.9rem; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Запуски агента (OpenClaw)</h1>
+    <div class="toolbar">
+        <form method="get" action="">
+            <label>Статус: <select name="status"><option value="">Все</option><option value="running" {% if status_filter == "running" %}selected{% endif %}>Выполняется</option><option value="success" {% if status_filter == "success" %}selected{% endif %}>Успех</option><option value="failed" {% if status_filter == "failed" %}selected{% endif %}>Ошибка</option></select></label>
+            <label>Тип: <select name="run_type"><option value="">Все</option><option value="analysis" {% if run_type_filter == "analysis" %}selected{% endif %}>Анализ</option><option value="training" {% if run_type_filter == "training" %}selected{% endif %}>Обучение</option><option value="demo" {% if run_type_filter == "demo" %}selected{% endif %}>Демо</option><option value="live" {% if run_type_filter == "live" %}selected{% endif %}>Live</option></select></label>
+            <button type="submit">Показать</button>
+        </form>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Старт</th>
+                    <th>Статус</th>
+                    <th>Тип</th>
+                    <th>Триггер</th>
+                    <th>Длительность</th>
+                    <th>Summary</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in runs %}
+                <tr>
+                    <td><a href="{% url 'agent:run-detail-page' r.id %}">{{ r.id }}</a></td>
+                    <td>{{ r.started_at|date:"d.m.Y H:i" }}</td>
+                    <td><span class="status {{ r.status }}">{{ r.status }}</span></td>
+                    <td>{{ r.run_type_display }}</td>
+                    <td>{{ r.trigger }}</td>
+                    <td>{% if r.duration_sec != None %}{{ r.duration_sec|floatformat:0 }} с{% else %}—{% endif %}</td>
+                    <td class="summary">{{ r.summary }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" style="text-align:center;color:#888;padding:2rem;">Нет запусков. OpenClaw создаёт их через POST /api/agent/runs/.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="nav-links">
+        <a href="{% url 'market:select_tickers' %}">Тикеры на день</a>
+        <a href="{% url 'market:instruments' %}">Инструменты</a>
+        <a href="{% url 'admin:index' %}">Админка</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Запуск #{{ run.id }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 1rem; background: #0e0e12; color: #e5e5e5; }
+        a { color: #7cb3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1, h2 { font-size: 1.2rem; margin: 1rem 0 0.5rem; }
+        h2 { font-size: 1rem; color: #aaa; }
+        .meta { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; padding: 1rem; background: #1a1a1f; border-radius: 8px; border: 1px solid #2a2a32; }
+        .meta span { margin-right: 1.5rem; }
+        .status { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85rem; }
+        .status.running { background: #2a4a2a; color: #8f8; }
+        .status.success { background: #1e3a5f; color: #7cb3ff; }
+        .status.failed { background: #5f2a2a; color: #f88; }
+        .block { margin-bottom: 1.5rem; border: 1px solid #2a2a32; border-radius: 8px; overflow: hidden; background: #1a1a1f; }
+        .block table { width: 100%; border-collapse: collapse; }
+        .block th, .block td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #2a2a32; font-size: 0.9rem; }
+        .block th { color: #888; }
+        .log-list { max-height: 400px; overflow-y: auto; }
+        .log-line { padding: 0.35rem 0.75rem; font-family: ui-monospace, monospace; font-size: 0.8rem; border-bottom: 1px solid #2a2a32; }
+        .log-line.debug { color: #666; }
+        .log-line.info { color: #ccc; }
+        .log-line.warning { color: #fa0; }
+        .log-line.error { color: #f66; }
+        .content-json { font-family: ui-monospace, monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; color: #aaa; }
+        .reason { max-width: 400px; }
+        .nav-links { margin-top: 1rem; }
+        .feedback-form { padding: 1rem; background: #1a1a1f; border: 1px solid #2a2a32; border-radius: 8px; margin-top: 0.5rem; }
+        .feedback-form label { display: block; margin-top: 0.5rem; }
+        .feedback-form select, .feedback-form textarea { width: 100%; max-width: 400px; }
+        .feedback-list { margin-top: 0.5rem; }
+        .feedback-item { padding: 0.5rem 0.75rem; border-bottom: 1px solid #2a2a32; font-size: 0.9rem; }
+        .nav-links a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>Запуск #{{ run.id }}</h1>
+    <div class="meta">
+        <span>Старт: {{ run.started_at|date:"d.m.Y H:i:s" }}</span>
+        <span>Статус: <span class="status {{ run.status }}">{{ run.status }}</span></span>
+        <span>Тип: {{ run.get_run_type_display|default:run.run_type|default:"—" }}</span>
+        <span>Триггер: {{ run.trigger }}</span>
+        {% if duration_sec != None %}<span>Длительность: {{ duration_sec|floatformat:0 }} с</span>{% endif %}
+    </div>
+    {% if input_params_json %}
+    <h2>Входные параметры</h2>
+    <div class="block"><pre class="content-json">{{ input_params_json }}</pre></div>
+    {% endif %}
+    {% if run.summary %}
+    <h2>Summary</h2>
+    <div class="block" style="padding:0.75rem;">{{ run.summary }}</div>
+    {% endif %}
+
+    <h2>Ход рассуждений</h2>
+    <div class="block">
+        {% if reasoning_steps_data %}
+        <table>
+            <thead><tr><th>Шаг</th><th>Описание</th><th>Данные</th><th>Вывод</th><th>Правило</th></tr></thead>
+            <tbody>
+                {% for r in reasoning_steps_data %}
+                <tr>
+                    <td>{{ r.step|default:forloop.counter }}</td>
+                    <td>{{ r.description|default:"—" }}</td>
+                    <td><pre class="content-json">{% if r.input_display %}{{ r.input_display }}{% else %}—{% endif %}</pre></td>
+                    <td>{{ r.conclusion|default:"—" }}</td>
+                    <td>{{ r.rule|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="padding:1rem;color:#888;">Нет шагов рассуждения. OpenClaw может присылать их с analysis_type: "reasoning_step" и content: {step, description, input_data, conclusion, rule}.</p>
+        {% endif %}
+    </div>
+
+    <h2>Анализ</h2>
+    <div class="block">
+        {% if analyses_data %}
+        <table>
+            <thead><tr><th>Символ</th><th>Тип</th><th>Содержимое</th><th>Время</th></tr></thead>
+            <tbody>
+                {% for a in analyses_data %}
+                <tr>
+                    <td>{{ a.obj.symbol|default:"—" }}</td>
+                    <td>{{ a.obj.get_analysis_type_display }}</td>
+                    <td><pre class="content-json">{{ a.content_display }}</pre></td>
+                    <td>{{ a.obj.created_at|date:"H:i:s" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="padding:1rem;color:#888;">Нет записей анализа.</p>
+        {% endif %}
+    </div>
+
+    <h2>Сигналы / решения</h2>
+    <div class="block">
+        {% if signals_with_rules %}
+        <table>
+            <thead><tr><th>Символ</th><th>Сторона</th><th>Цена</th><th>Стоп</th><th>Цель</th><th>Причина</th><th>Правило</th><th>Уверенность</th><th></th></tr></thead>
+            <tbody>
+                {% for swr in signals_with_rules %}
+                <tr>
+                    <td>{{ swr.signal.symbol }}</td>
+                    <td>{{ swr.signal.get_side_display }}</td>
+                    <td>{{ swr.signal.price_level|default:"—" }}</td>
+                    <td>{{ swr.signal.stop_level|default:"—" }}</td>
+                    <td>{{ swr.signal.target_level|default:"—" }}</td>
+                    <td class="reason">{{ swr.signal.reason|default:"—" }}</td>
+                    <td>{% if swr.rule_excerpt %}<span title="{{ swr.rule_excerpt }}">{{ swr.rule_name }}</span>{% else %}{{ swr.rule_name }}{% endif %}</td>
+                    <td>{{ swr.signal.confidence|default:"—" }}</td>
+                    <td><a href="#feedback-form" data-signal-id="{{ swr.signal.id }}">Скорректировать</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="padding:1rem;color:#888;">Нет сигналов.</p>
+        {% endif %}
+    </div>
+
+    <h2>Обратная связь</h2>
+    <div class="block">
+        {% if feedbacks %}
+        <div class="feedback-list">
+            {% for f in feedbacks %}
+            <div class="feedback-item">
+                <strong>{{ f.get_feedback_type_display }}</strong>
+                {% if f.signal %} (сигнал #{{ f.signal.id }} {{ f.signal.symbol }}){% endif %}
+                — {{ f.comment|default:"—" }}
+                <span style="color:#888;">{{ f.created_at|date:"d.m.Y H:i" }}{% if f.user %} · {{ f.user }}{% endif %}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p style="padding:1rem;color:#888;">Нет обратной связи.</p>
+        {% endif %}
+        <div class="feedback-form" id="feedback-form">
+            <form method="post" action="">
+                {% csrf_token %}
+                <label>Тип: <select name="feedback_type" required>
+                    <option value="correction">Коррекция</option>
+                    <option value="override">Отклонить</option>
+                    <option value="approve">Одобрить</option>
+                </select></label>
+                <label>К запуску / к сигналу: <select name="signal_id">
+                    <option value="">Ко всему запуску</option>
+                    {% for swr in signals_with_rules %}
+                    <option value="{{ swr.signal.id }}">Сигнал #{{ swr.signal.id }} {{ swr.signal.symbol }}</option>
+                    {% endfor %}
+                </select></label>
+                <label>Комментарий: <textarea name="comment" rows="2" placeholder="Текст обратной связи"></textarea></label>
+                <button type="submit">Добавить</button>
+            </form>
+        </div>
+    </div>
+
+    <h2>Логи</h2>
+    <div class="toolbar">
+        <form method="get" action="">
+            <input type="hidden" name="page" value="{{ request.GET.page }}">
+            <label>Уровень: <select name="log_level"><option value="">Все</option><option value="debug" {% if log_level_filter == "debug" %}selected{% endif %}>Debug</option><option value="info" {% if log_level_filter == "info" %}selected{% endif %}>Info</option><option value="warning" {% if log_level_filter == "warning" %}selected{% endif %}>Warning</option><option value="error" {% if log_level_filter == "error" %}selected{% endif %}>Error</option></select></label>
+            <button type="submit">Показать</button>
+        </form>
+    </div>
+    <div class="block log-list">
+        {% if logs %}
+        {% for l in logs %}
+        <div class="log-line {{ l.level }}">[{{ l.created_at|date:"H:i:s" }}] [{{ l.level }}] {% if l.source %}[{{ l.source }}] {% endif %}{{ l.message }}</div>
+        {% endfor %}
+        {% else %}
+        <p style="padding:1rem;color:#888;">Нет логов.</p>
+        {% endif %}
+    </div>
+
+    <div class="nav-links">
+        <a href="{% url 'agent:dashboard' %}">← К списку запусков</a>
+        <a href="{% url 'market:select_tickers' %}">Тикеры на день</a>
+        <a href="{% url 'admin:index' %}">Админка</a>
+    </div>
+</body>
+</html>

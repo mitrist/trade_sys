@@ -41,6 +41,8 @@
 - Админка: <http://127.0.0.1:8000/admin/>
 - Страница выбора тикеров на день: <http://127.0.0.1:8000/api/select-tickers/> (требуется вход)
 - Графики выбранных тикеров (TradingView): <http://127.0.0.1:8000/api/charts/> (требуется вход)
+- Запуски агента (OpenClaw): список запусков и детали (анализ, сигналы, логи) — <http://127.0.0.1:8000/api/agent/>
+- Таблица инструментов (сортировка по столбцам): <http://127.0.0.1:8000/api/instruments/>
 - История объёма по тикеру: <http://127.0.0.1:8000/api/volume-history/> — выбор тикера и график объёма/оборота по дням (требуется вход)
 - API (read-only): <http://127.0.0.1:8000/api/selected-tickers/>, `/api/daily-volumes/`, `/api/candles/`
 
@@ -75,6 +77,16 @@
 - `GET /api/candles/?symbol=...&interval=...&start=...&end=...` — свечи (фильтры по symbol, interval, start, end в ISO формате).
 
 Требуется аутентификация (SessionAuthentication). Для OpenClaw позже можно добавить токен или отдельный ключ.
+
+**API агента (запись прогресса OpenClaw):**
+
+- `POST /api/agent/runs/` — создать запуск (тело: `{"trigger": "cron"|"manual", "input_params": {...}}`), в ответе `id`.
+- `POST /api/agent/runs/<id>/analysis/` — добавить анализ (тело: `{"items": [{"symbol", "analysis_type", "content": {...}}]}`).
+- `POST /api/agent/runs/<id>/signals/` — добавить сигналы (тело: `{"items": [{"symbol", "side", "price_level", "reason", ...}]}`).
+- `POST /api/agent/runs/<id>/logs/` — добавить логи (тело: `{"items": [{"level", "message", "source"?}]}`).
+- `PATCH /api/agent/runs/<id>/` — завершить запуск (тело: `{"status": "success"|"failed", "summary": "..."}`).
+
+Прогресс смотри в веб-интерфейсе: <http://127.0.0.1:8000/api/agent/>.
 
 ## Развёртывание на VM (Яндекс и др.)
 
