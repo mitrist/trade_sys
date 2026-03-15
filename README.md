@@ -85,12 +85,13 @@
   .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000
   ```
   Проксирование через nginx, HTTPS (Let's Encrypt).
-- Переменные: `SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS` с доменом/IP. Чтобы подгрузить `.env` в текущую оболочку: `set -a && source .env && set +a` (или `export $(grep -v '^#' .env | xargs)`).
+- Переменные: `SECRET_KEY`, `DEBUG=0`, **`ALLOWED_HOSTS`** — через запятую IP или домен, с которых заходите (иначе будет `DisallowedHost`). Пример для доступа по IP и порту 8030: в `.env` задать `ALLOWED_HOSTS=93.77.182.91,localhost,127.0.0.1`. Подгрузить `.env`: `set -a && source .env && set +a`.
 
 ### Частые проблемы при запуске
 
 - **«That port is already in use»** — порт 8000 занят. Найти процесс: `lsof -i :8000` (или `ss -tlnp | grep 8000`), завершить: `kill <PID>`. Либо запустить на другом порту: `--bind 0.0.0.0:8001`.
 - **«Command gunicorn not found»** — ставить gunicorn в виртуальном окружении: `pip install gunicorn` или `pip install -r requirements.txt`, затем вызывать через `./.venv/bin/gunicorn` или активировать venv и запускать `gunicorn`.
+- **Статика админки не грузится (Not Found: /static/admin/...)** — Gunicorn сам статику не отдаёт. В проекте включён WhiteNoise: установи `pip install whitenoise`, выполни `python manage.py collectstatic` и перезапусти gunicorn. Статика будет отдаваться тем же процессом.
 - **Загрузка переменных из `.env`** — команда не `.env`, а `source .env` (или `source .env` в bash).
 
 ### Крон (рекомендуемое расписание)
