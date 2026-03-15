@@ -79,9 +79,19 @@
 ## Развёртывание на VM (Яндекс и др.)
 
 - ОС: Linux (Ubuntu 22.04), Python 3.10+.
-- Установка: виртуальное окружение, `pip install -r requirements.txt`, `python manage.py migrate`, `python manage.py collectstatic`.
-- Запуск: gunicorn (например `gunicorn config.wsgi:application --bind 0.0.0.0:8000`), проксирование через nginx, HTTPS (Let's Encrypt).
-- Переменные: `SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS` с доменом/IP.
+- Установка: виртуальное окружение, `pip install -r requirements.txt` (в него входит gunicorn — ставить через pip в venv, не через `apt`), `python manage.py migrate`, `python manage.py collectstatic`.
+- Запуск Gunicorn (обязательно `--bind`, не `--`):
+  ```bash
+  .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000
+  ```
+  Проксирование через nginx, HTTPS (Let's Encrypt).
+- Переменные: `SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS` с доменом/IP. Чтобы подгрузить `.env` в текущую оболочку: `set -a && source .env && set +a` (или `export $(grep -v '^#' .env | xargs)`).
+
+### Частые проблемы при запуске
+
+- **«That port is already in use»** — порт 8000 занят. Найти процесс: `lsof -i :8000` (или `ss -tlnp | grep 8000`), завершить: `kill <PID>`. Либо запустить на другом порту: `--bind 0.0.0.0:8001`.
+- **«Command gunicorn not found»** — ставить gunicorn в виртуальном окружении: `pip install gunicorn` или `pip install -r requirements.txt`, затем вызывать через `./.venv/bin/gunicorn` или активировать venv и запускать `gunicorn`.
+- **Загрузка переменных из `.env`** — команда не `.env`, а `source .env` (или `source .env` в bash).
 
 ### Крон (рекомендуемое расписание)
 
