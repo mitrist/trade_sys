@@ -1,5 +1,5 @@
 from django.contrib import admin
-from market.models import Candle, SelectedTicker, TickerDailyVolume Candle, SelectedTicker, TickerDailyVolume
+from market.models import Candle, SelectedTicker, TickerDailyVolume
 
 
 @admin.register(TickerDailyVolume)
