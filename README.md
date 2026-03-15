@@ -85,7 +85,7 @@
   .venv/bin/gunicorn config.wsgi:application --bind 0.0.0.0:8000
   ```
   Проксирование через nginx, HTTPS (Let's Encrypt).
-- Переменные: `SECRET_KEY`, `DEBUG=0`, **`ALLOWED_HOSTS`** — через запятую IP или домен, с которых заходите (иначе будет `DisallowedHost`). Пример для доступа по IP и порту 8030: в `.env` задать `ALLOWED_HOSTS=93.77.182.91,localhost,127.0.0.1`. Подгрузить `.env`: `set -a && source .env && set +a`.
+- Переменные: в корне проекта создай файл `.env` (пример — `.env.example`). Обязательно укажи **`ALLOWED_HOSTS`** — через запятую IP или домен, с которых заходишь (иначе будет `DisallowedHost`). Пример: `ALLOWED_HOSTS=93.77.182.91,localhost,127.0.0.1`. Django подхватывает `.env` сам при старте (через python-dotenv), перед запуском gunicorn ничего вручную подгружать не нужно.
 
 ### Частые проблемы при запуске
 
@@ -96,19 +96,24 @@
 
 ### Крон (рекомендуемое расписание)
 
-- Раз в сутки сохранять объёмы по всем парам:
+Строки ниже **не вводятся в терминал как одна команда** — их нужно добавить в планировщик cron.
 
-  ```cron
-  10 0 * * * cd /path/to/project && .venv/bin/python manage.py fetch_daily_volumes
+**Как добавить задания в cron:**
+
+1. Открой редактор crontab: `crontab -e`
+2. В конец файла вставь строки (замени `/path/to/project` на полный путь, например `/home/mitrist12/trading/trade_sys`):
+   ```
+   10 0 * * * cd /path/to/project && .venv/bin/python manage.py fetch_daily_volumes
+   30 0 * * * cd /path/to/project && .venv/bin/python manage.py fetch_klines_for_selected --interval=15
+   ```
+3. Сохрани и закрой редактор. Задания будут выполняться по расписанию.
+
+В строках `.venv/bin/python` — интерпретатор из виртуального окружения (активировать venv в cron не нужно). Время — по UTC.
+
+**Проверка вручную (без cron):** выполни в каталоге проекта в терминале только саму команду, без `10 0 * * *`:
+  ```bash
+  cd /home/mitrist12/trading/trade_sys && .venv/bin/python manage.py fetch_daily_volumes
   ```
-
-- Раз в сутки (или каждые N часов) собирать свечи по выбранным тикерам за текущий день:
-
-  ```cron
-  30 0 * * * cd /path/to/project && .venv/bin/python manage.py fetch_klines_for_selected --interval=15
-  ```
-
-Время в кроне — по UTC (или подстрой под свой часовой пояс).
 
 ## Документация стратегии
 
